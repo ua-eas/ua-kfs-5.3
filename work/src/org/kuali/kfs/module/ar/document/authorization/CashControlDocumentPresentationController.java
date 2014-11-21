@@ -1,0 +1,170 @@
+/*
+ * The Kuali Financial System, a comprehensive financial management system for higher education.
+ * 
+ * Copyright 2005-2014 The Kuali Foundation
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.kuali.kfs.module.ar.document.authorization;
+
+import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
+import org.kuali.kfs.module.ar.ArAuthorizationConstants;
+import org.kuali.kfs.module.ar.ArConstants;
+import org.kuali.kfs.module.ar.businessobject.CashControlDetail;
+import org.kuali.kfs.module.ar.document.CashControlDocument;
+import org.kuali.kfs.module.ar.document.PaymentApplicationDocument;
+import org.kuali.kfs.sys.context.SpringContext;
+import org.kuali.kfs.sys.document.FinancialSystemTransactionalDocument;
+import org.kuali.kfs.sys.document.authorization.FinancialSystemTransactionalDocumentPresentationControllerBase;
+import org.kuali.kfs.sys.service.BankService;
+import org.kuali.rice.kew.api.WorkflowDocument;
+import org.kuali.rice.krad.document.Document;
+
+public class CashControlDocumentPresentationController extends FinancialSystemTransactionalDocumentPresentationControllerBase {
+
+    @Override
+    public Set<String> getEditModes(Document document) {
+        Set<String> editModes = super.getEditModes(document);
+
+        CashControlDocument cashControlDocument = (CashControlDocument) document;
+        WorkflowDocument workflowDocument = document.getDocumentHeader().getWorkflowDocument();
+
+        if ((workflowDocument.isInitiated() || workflowDocument.isSaved() || workflowDocument.isCompletionRequested()) && !(cashControlDocument.getElectronicPaymentClaims().size() > 0)) {
+            editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_PAYMENT_MEDIUM);
+            editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_DETAILS);
+            editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_REF_DOC_NBR);
+            editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_BANK_CODE);
+            if (SpringContext.getBean(BankService.class).isBankSpecificationEnabled()) {
+                editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.SHOW_BANK_CODE);
+            }
+        }
+        else {
+            if (StringUtils.isNotBlank(cashControlDocument.getBankCode())) {
+                editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.SHOW_BANK_CODE);
+            }
+        }
+
+        // if the document is in routing, then we have some special rules
+        if (workflowDocument.isEnroute()) {
+
+            // if doc is cash-type then payment app link always shows, once its in routing
+            if (ArConstants.PaymentMediumCode.CASH.equalsIgnoreCase(cashControlDocument.getCustomerPaymentMediumCode())) {
+                editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_PAYMENT_APP_DOC);
+            }
+            // if not cash, then payapp link only shows once the GLPE's have been generated
+            else if (!cashControlDocument.getGeneralLedgerPendingEntries().isEmpty()) {
+                editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_PAYMENT_APP_DOC);
+            }
+
+            // the person who has the approval request in their Action List
+            // should be able to modify the document
+            if (workflowDocument.isApprovalRequested() && !ArConstants.PaymentMediumCode.CASH.equalsIgnoreCase(cashControlDocument.getCustomerPaymentMediumCode())) {
+                // if glpes have not been generated yet the user can change payment medium and generate glpes
+                if (cashControlDocument.getGeneralLedgerPendingEntries().isEmpty()) {
+                    editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_PAYMENT_MEDIUM);
+                    editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.SHOW_GENERATE_BUTTON);
+                }
+                Integer totalGLRecordsCreated = cashControlDocument.getGeneralLedgerEntriesPostedCount();
+
+                if (totalGLRecordsCreated.intValue() > 0) {
+                    editModes.remove(ArAuthorizationConstants.CashControlDocumentEditMode.SHOW_GENERATE_BUTTON);
+                    editModes.remove(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_PAYMENT_MEDIUM);
+                }
+            }
+            if (workflowDocument.isApprovalRequested() && ArConstants.PaymentMediumCode.CASH.equalsIgnoreCase(cashControlDocument.getCustomerPaymentMediumCode())) {
+                // if payment medium cash then the ref doc number can be changed
+                editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_PAYMENT_MEDIUM);
+                editModes.add(ArAuthorizationConstants.CashControlDocumentEditMode.EDIT_REF_DOC_NBR);
+            }
+
+        }
+
+        return editModes;
+    }
+
+    @Override
+    public boolean canBlanketApprove(Document document) {
+        return false;
+    }
+
+    @Override
+    public boolean canDisapprove(Document document) {
+        return !hasAtLeastOneAppDocApproved((CashControlDocument) document);
+    }
+
+    @Override
+    public boolean canApprove(Document document) {
+        return hasAllAppDocsApproved((CashControlDocument) document);
+    }
+
+    @Override
+    public boolean canErrorCorrect(FinancialSystemTransactionalDocument document) {
+        return false;
+    }
+
+    @Override
+    public boolean canCancel(Document document) {
+        return !hasAtLeastOneAppDocApproved((CashControlDocument) document);
+    }
+
+    protected boolean containsGLPEs(CashControlDocument document) {
+        return !document.getGeneralLedgerPendingEntries().isEmpty();
+    }
+
+    /**
+     * This method checks if the CashControlDocument has at least one application document that has been approved
+     *
+     * @param ccDoc the CashControlDocument
+     * @return true if it has at least one application document approved, false otherwise
+     */
+    protected boolean hasAtLeastOneAppDocApproved(CashControlDocument cashControlDocument) {
+        boolean result = false;
+        // check if there is at least one Application Document approved
+        for (CashControlDetail cashControlDetail : cashControlDocument.getCashControlDetails()) {
+            PaymentApplicationDocument applicationDocument = cashControlDetail.getReferenceFinancialDocument();
+            WorkflowDocument workflowDocument = applicationDocument.getDocumentHeader().getWorkflowDocument();
+
+            if (workflowDocument != null && workflowDocument.isApproved()) {
+                result = true;
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * This method chech if all application document have been approved
+     *
+     * @param cashControlDocument the CashControlDocument
+     * @return true if all application documents have been approved, false otherwise
+     */
+    protected boolean hasAllAppDocsApproved(CashControlDocument cashControlDocument) {
+        boolean result = true;
+        for (CashControlDetail cashControlDetail : cashControlDocument.getCashControlDetails()) {
+
+            PaymentApplicationDocument applicationDocument = cashControlDetail.getReferenceFinancialDocument();
+            WorkflowDocument workflowDocument = applicationDocument.getDocumentHeader().getWorkflowDocument();
+
+            if (!(workflowDocument.isApproved() || workflowDocument.isFinal())) {
+                result = false;
+                break;
+            }
+
+        }
+        return result;
+    }
+
+}

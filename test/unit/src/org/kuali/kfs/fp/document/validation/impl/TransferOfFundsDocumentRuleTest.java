@@ -1,0 +1,653 @@
+/*
+ * The Kuali Financial System, a comprehensive financial management system for higher education.
+ * 
+ * Copyright 2005-2014 The Kuali Foundation
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.kuali.kfs.fp.document.validation.impl;
+
+
+import static org.kuali.kfs.sys.KualiTestAssertionUtils.assertGlobalMessageMapContains;
+import static org.kuali.kfs.sys.document.validation.impl.AccountingDocumentRuleTestUtils.testAddAccountingLineRule_ProcessAddAccountingLineBusinessRules;
+import static org.kuali.kfs.sys.document.validation.impl.AccountingDocumentRuleTestUtils.testGenerateGeneralLedgerPendingEntriesRule_ProcessGenerateGeneralLedgerPendingEntries;
+import static org.kuali.kfs.sys.document.validation.impl.AccountingDocumentRuleTestUtils.testRouteDocumentRule_processRouteDocument;
+import static org.kuali.kfs.sys.document.validation.impl.AccountingDocumentRuleTestUtils.testSaveDocumentRule_ProcessSaveDocument;
+import static org.kuali.kfs.sys.fixture.AccountingLineFixture.EXPENSE_LINE;
+import static org.kuali.kfs.sys.fixture.AccountingLineFixture.FLEXIBLE_EXPENSE_LINE;
+import static org.kuali.kfs.sys.fixture.AccountingLineFixture.LINE10;
+import static org.kuali.kfs.sys.fixture.AccountingLineFixture.LINE11;
+import static org.kuali.kfs.sys.fixture.AccountingLineFixture.LINE12;
+import static org.kuali.kfs.sys.fixture.AccountingLineFixture.LINE13;
+import static org.kuali.kfs.sys.fixture.AccountingLineFixture.LINE8;
+import static org.kuali.kfs.sys.fixture.AccountingLineFixture.LINE9;
+import static org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture.EXPECTED_EXPLICIT_SOURCE_PENDING_ENTRY_FOR_EXPENSE;
+import static org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture.EXPECTED_EXPLICIT_TARGET_PENDING_ENTRY_FOR_EXPENSE;
+import static org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture.EXPECTED_FLEXIBLE_EXPLICIT_SOURCE_PENDING_ENTRY_FOR_EXPENSE;
+import static org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture.EXPECTED_FLEXIBLE_EXPLICIT_SOURCE_PENDING_ENTRY_FOR_EXPENSE2;
+import static org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture.EXPECTED_FLEXIBLE_OFFSET_SOURCE_PENDING_ENTRY;
+import static org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture.EXPECTED_FLEXIBLE_OFFSET_SOURCE_PENDING_ENTRY_MISSING_OFFSET_DEFINITION;
+import static org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture.EXPECTED_OFFSET_SOURCE_PENDING_ENTRY;
+import static org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture.EXPECTED_OFFSET_TARGET_PENDING_ENTRY;
+import static org.kuali.kfs.sys.fixture.UserNameFixture.khuntley;
+import static org.kuali.kfs.sys.service.IsDebitTestUtils.Amount.NEGATIVE;
+import static org.kuali.kfs.sys.service.IsDebitTestUtils.Amount.POSITIVE;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.kuali.kfs.coa.businessobject.OffsetDefinition;
+import org.kuali.kfs.fp.businessobject.VoucherSourceAccountingLine;
+import org.kuali.kfs.fp.document.TransferOfFundsDocument;
+import org.kuali.kfs.sys.ConfigureContext;
+import org.kuali.kfs.sys.DocumentTestUtils;
+import org.kuali.kfs.sys.KFSConstants;
+import org.kuali.kfs.sys.KFSKeyConstants;
+import org.kuali.kfs.sys.businessobject.AccountingLine;
+import org.kuali.kfs.sys.businessobject.SourceAccountingLine;
+import org.kuali.kfs.sys.businessobject.TargetAccountingLine;
+import org.kuali.kfs.sys.context.KualiTestBase;
+import org.kuali.kfs.sys.context.SpringContext;
+import org.kuali.kfs.sys.context.TestUtils;
+import org.kuali.kfs.sys.document.AccountingDocument;
+import org.kuali.kfs.sys.document.validation.Validation;
+import org.kuali.kfs.sys.document.validation.impl.AccountingLineValueAllowedValidation;
+import org.kuali.kfs.sys.fixture.GeneralLedgerPendingEntryFixture;
+import org.kuali.kfs.sys.service.IsDebitTestUtils;
+import org.kuali.kfs.sys.service.UniversityDateService;
+import org.kuali.kfs.sys.suite.AnnotationTestSuite;
+import org.kuali.kfs.sys.suite.CrossSectionSuite;
+import org.kuali.rice.core.api.util.type.KualiDecimal;
+import org.kuali.rice.kns.service.DataDictionaryService;
+import org.kuali.rice.krad.service.DocumentService;
+
+@ConfigureContext(session = khuntley)
+public class TransferOfFundsDocumentRuleTest extends KualiTestBase {
+    public static final Class<TransferOfFundsDocument> DOCUMENT_CLASS = TransferOfFundsDocument.class;
+
+    private static final String NON_MANDATORY_TRANSFER_OBJECT_CODE = "1669";
+
+
+    @AnnotationTestSuite(CrossSectionSuite.class)
+    public void testProcessGenerateGeneralLedgerPendingEntries_validSourceExpenseFlexibleOffset() throws Exception {
+        TestUtils.setSystemParameter(OffsetDefinition.class, KFSConstants.SystemGroupParameterNames.FLEXIBLE_OFFSET_ENABLED_FLAG, "Y");
+        testGenerateGeneralLedgerPendingEntriesRule_ProcessGenerateGeneralLedgerPendingEntries(createDocument(), FLEXIBLE_EXPENSE_LINE.createTargetAccountingLine(), EXPECTED_FLEXIBLE_EXPLICIT_SOURCE_PENDING_ENTRY_FOR_EXPENSE2, EXPECTED_FLEXIBLE_OFFSET_SOURCE_PENDING_ENTRY);
+    }
+
+    public void testProcessGenerateGeneralLedgerPendingEntries_validSourceExpenseMissingOffsetDefinition() throws Exception {
+        TestUtils.setSystemParameter(OffsetDefinition.class, KFSConstants.SystemGroupParameterNames.FLEXIBLE_OFFSET_ENABLED_FLAG, "Y");
+        TransferOfFundsDocument document = DocumentTestUtils.createDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        document.setPostingYear(2000); // because our test database has no offset definitions (GL_OFFSET_DEFN_T) for
+        // UNIV_FISCAL_YR=2000.
+        document.setPostingPeriodCode("06"); // because this BO reveals no change when the year is set by itself.
+        AccountingLine accountingLine = FLEXIBLE_EXPENSE_LINE.createSourceAccountingLine();
+        GeneralLedgerPendingEntryFixture expectedExplicit = EXPECTED_FLEXIBLE_EXPLICIT_SOURCE_PENDING_ENTRY_FOR_EXPENSE;
+        GeneralLedgerPendingEntryFixture expectedOffset = EXPECTED_FLEXIBLE_OFFSET_SOURCE_PENDING_ENTRY_MISSING_OFFSET_DEFINITION;
+
+        boolean ruleResult = testGenerateGeneralLedgerPendingEntriesRule_ProcessGenerateGeneralLedgerPendingEntries(document, accountingLine, expectedExplicit, expectedOffset);
+        assertEquals(false, ruleResult);
+        assertGlobalMessageMapContains(KFSConstants.GENERAL_LEDGER_PENDING_ENTRIES_TAB_ERRORS, KFSKeyConstants.ERROR_DOCUMENT_NO_OFFSET_DEFINITION);
+    }
+
+    public void testIsDebit_source_income_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getIncomeLine(accountingDocument, SourceAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebit(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_income_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getIncomeLine(accountingDocument, SourceAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_income_zeroAmount() throws Exception {
+
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getIncomeLine(accountingDocument, SourceAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_expense_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getExpenseLine(accountingDocument, SourceAccountingLine.class, POSITIVE);
+        assertTrue(IsDebitTestUtils.isDebit(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_expense_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getExpenseLine(accountingDocument, SourceAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_expense_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getExpenseLine(accountingDocument, SourceAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_asset_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, SourceAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_asset_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, SourceAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_asset_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, SourceAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_liability_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, SourceAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_liability_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, SourceAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_source_liability_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, SourceAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_income_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getIncomeLine(accountingDocument, TargetAccountingLine.class, POSITIVE);
+
+        assertFalse(IsDebitTestUtils.isDebit(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_income_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getIncomeLine(accountingDocument, TargetAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_income_zeroAmount() throws Exception {
+
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getIncomeLine(accountingDocument, TargetAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_expense_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getExpenseLine(accountingDocument, TargetAccountingLine.class, POSITIVE);
+
+        assertFalse(IsDebitTestUtils.isDebit(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_expense_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getExpenseLine(accountingDocument, TargetAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_expense_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getExpenseLine(accountingDocument, TargetAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_asset_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, TargetAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_asset_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, TargetAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_asset_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, TargetAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_liability_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, TargetAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_liability_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, TargetAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_target_liability_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, TargetAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_source_income_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getIncomeLine(accountingDocument, SourceAccountingLine.class, NEGATIVE);
+
+        assertFalse(IsDebitTestUtils.isDebit(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_source_expense_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getExpenseLine(accountingDocument, SourceAccountingLine.class, NEGATIVE);
+
+        assertFalse(IsDebitTestUtils.isDebit(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_source_asset_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, SourceAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_source_asset_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, SourceAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_source_asset_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, SourceAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_source_liability_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, SourceAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_source_liability_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, SourceAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_source_liability_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, SourceAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_target_income_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getIncomeLine(accountingDocument, TargetAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebit(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+
+    }
+
+    public void testIsDebit_errorCorrection_target_expense_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getExpenseLine(accountingDocument, TargetAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebit(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_target_asset_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, TargetAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_target_asset_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, TargetAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_target_asset_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getAssetLine(accountingDocument, TargetAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_target_liability_positveAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, TargetAccountingLine.class, POSITIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_target_liability_negativeAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, TargetAccountingLine.class, NEGATIVE);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsDebit_errorCorrection_target_liability_zeroAmount() throws Exception {
+        AccountingDocument accountingDocument = IsDebitTestUtils.getErrorCorrectionDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        AccountingLine accountingLine = IsDebitTestUtils.getLiabilityLine(accountingDocument, TargetAccountingLine.class, KualiDecimal.ZERO);
+
+        assertTrue(IsDebitTestUtils.isDebitIllegalStateException(SpringContext.getBean(DataDictionaryService.class), SpringContext.getBean(DataDictionaryService.class), accountingDocument, accountingLine));
+    }
+
+    public void testIsObjectTypeAllowed_InvalidObjectType() throws Exception {
+        testAddAccountingLineRule_IsObjectTypeAllowed(getInvalidObjectTypeSourceLine(), false);
+    }
+
+    public void testIsObjectTypeAllowed_Valid() throws Exception {
+        testAddAccountingLineRule_IsObjectTypeAllowed(getValidObjectTypeSourceLine(), true);
+    }
+
+    public void testIsObjectCodeAllowed_Valid() throws Exception {
+        testAddAccountingLineRule_IsObjectCodeAllowed(getValidObjectCodeSourceLine(), true);
+    }
+
+    public void testIsObjectCodeAllowed_InvalidObjectCode() throws Exception {
+        testAddAccountingLineRule_IsObjectCodeAllowed(getInvalidObjectCodeSourceLine(), false);
+    }
+
+    public void testAddAccountingLine_InvalidObjectSubType() throws Exception {
+        AccountingDocument doc = createDocumentWithInvalidObjectSubType();
+        // make sure we are using a valid object code for this type of doc
+        for (int i = 0; i < doc.getSourceAccountingLines().size(); i++) {
+            SourceAccountingLine sourceAccountingLine = (SourceAccountingLine) doc.getSourceAccountingLines().get(i);
+            sourceAccountingLine.setFinancialObjectCode(NON_MANDATORY_TRANSFER_OBJECT_CODE);
+        }
+
+        for (int i = 0; i < doc.getTargetAccountingLines().size(); i++) {
+            TargetAccountingLine sourceAccountingLine = (TargetAccountingLine) doc.getTargetAccountingLines().get(i);
+            sourceAccountingLine.setFinancialObjectCode(NON_MANDATORY_TRANSFER_OBJECT_CODE);
+        }
+        // todo: is this correct? a test of an invalid object sub type expects an outcome of true
+        testAddAccountingLineRule_ProcessAddAccountingLineBusinessRules(doc, true);
+    }
+
+    public void testAddAccountingLine_Valid() throws Exception {
+        AccountingDocument doc = createDocumentWithValidObjectSubType();
+        testAddAccountingLineRule_ProcessAddAccountingLineBusinessRules(doc, true);
+    }
+
+    public void testIsObjectSubTypeAllowed_InvalidSubType() throws Exception {
+        testAddAccountingLine_IsObjectSubTypeAllowed(getInvalidObjectSubTypeTargetLine(), false);
+    }
+
+    public void testIsObjectSubTypeAllowed_ValidSubType() throws Exception {
+        testAddAccountingLine_IsObjectSubTypeAllowed(getValidObjectSubTypeTargetLine(), true);
+    }
+
+    public void testProcessSaveDocument_Valid() throws Exception {
+        testSaveDocumentRule_ProcessSaveDocument(createDocument(), true);
+    }
+
+    public void testProcessSaveDocument_Invalid() throws Exception {
+        testSaveDocumentRule_ProcessSaveDocument(createDocumentInvalidForSave(), false);
+    }
+
+    public void testProcessSaveDocument_Invalid1() throws Exception {
+        try {
+            testSaveDocumentRule_ProcessSaveDocument(null, false);
+            fail("validated null doc");
+        }
+        catch (Exception e) {
+            assertTrue(true);
+        }
+    }
+
+    public void testProcessRouteDocument_Valid() throws Exception {
+        TransferOfFundsDocument doc = createDocumentValidForRouting();
+        testRouteDocumentRule_processRouteDocument(doc, true);
+    }
+
+    public void testProcessRouteDocument_Invalid() throws Exception {
+        testRouteDocumentRule_processRouteDocument(createDocument(), false);
+    }
+
+    public void testProcessRouteDocument_NoAccountingLines() throws Exception {
+        testRouteDocumentRule_processRouteDocument(createDocument(), false);
+    }
+
+    public void testProcessRouteDocument_Unbalanced() throws Exception {
+        testRouteDocumentRule_processRouteDocument(createDocumentUnbalanced(), false);
+    }
+
+    public void testProcessGenerateGeneralLedgerPendingEntries_validTargetExpense() throws Exception {
+        testGenerateGeneralLedgerPendingEntriesRule_ProcessGenerateGeneralLedgerPendingEntries(createDocument(), EXPENSE_LINE.createTargetAccountingLine(), EXPECTED_EXPLICIT_TARGET_PENDING_ENTRY_FOR_EXPENSE, EXPECTED_OFFSET_TARGET_PENDING_ENTRY);
+    }
+
+    public void testProcessGenerateGeneralLedgerPendingEntries_validSourceExpense() throws Exception {
+
+        testGenerateGeneralLedgerPendingEntriesRule_ProcessGenerateGeneralLedgerPendingEntries(createDocument(), EXPENSE_LINE.createSourceAccountingLine(), EXPECTED_EXPLICIT_SOURCE_PENDING_ENTRY_FOR_EXPENSE, EXPECTED_OFFSET_SOURCE_PENDING_ENTRY);
+    }
+
+    private TransferOfFundsDocument createDocumentValidForRouting() throws Exception {
+        TransferOfFundsDocument doc = createDocument();
+        UniversityDateService dateService = SpringContext.getBean(UniversityDateService.class);
+        KualiDecimal balance = new KualiDecimal("21.12");
+
+        SourceAccountingLine sourceLine = new SourceAccountingLine();
+        sourceLine.setChartOfAccountsCode("BL");
+        sourceLine.setAccountNumber("1031400");
+        sourceLine.setFinancialObjectCode("1663");
+        sourceLine.setPostingYear(dateService.getCurrentFiscalYear());
+        sourceLine.setAmount(balance);
+        sourceLine.refresh();
+        List<SourceAccountingLine> sourceLines = new ArrayList<SourceAccountingLine>();
+        sourceLines.add(sourceLine);
+//
+        TargetAccountingLine targetLine = new TargetAccountingLine();
+        targetLine.setChartOfAccountsCode("BL");
+        targetLine.setAccountNumber("1031400");
+        targetLine.setFinancialObjectCode("5163");
+        targetLine.setPostingYear(dateService.getCurrentFiscalYear());
+        targetLine.setAmount(balance);
+        targetLine.refresh();
+        List<TargetAccountingLine> targetLines = new ArrayList<TargetAccountingLine>();
+        targetLines.add(targetLine);
+//
+        doc.setSourceAccountingLines(sourceLines);
+        doc.setTargetAccountingLines(targetLines);
+
+        return doc;
+    }
+
+    private TransferOfFundsDocument createDocumentInvalidForSave() throws Exception {
+        return getDocumentParameterNoDescription();
+    }
+
+    private TransferOfFundsDocument getDocumentParameterNoDescription() throws Exception {
+        TransferOfFundsDocument document = DocumentTestUtils.createDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+        document.getDocumentHeader().setDocumentDescription(null);
+        return document;
+    }
+
+    private TransferOfFundsDocument createDocument() throws Exception {
+        return DocumentTestUtils.createDocument(SpringContext.getBean(DocumentService.class), TransferOfFundsDocument.class);
+    }
+
+    private TransferOfFundsDocument createDocumentWithValidObjectSubType() throws Exception {
+        TransferOfFundsDocument retval = createDocument();
+        retval.setSourceAccountingLines(getValidObjectSubTypeSourceLines());
+        retval.setTargetAccountingLines(getValidObjectSubTypeTargetLines());
+        return retval;
+    }
+
+    private TargetAccountingLine getValidObjectSubTypeTargetLine() throws Exception {
+        return (TargetAccountingLine) makeObjectTypeAndSubTypeValid(LINE11.createTargetAccountingLine());
+    }
+
+    private AccountingLine makeObjectTypeAndSubTypeValid(AccountingLine line) {
+        line.setFinancialObjectCode("1698"); // IN type and MT sub-type on UA chart
+        line.refresh();
+        return line;
+    }
+
+    private TargetAccountingLine getInvalidObjectSubTypeTargetLine() throws Exception {
+        return LINE13.createTargetAccountingLine();
+    }
+
+    private List<SourceAccountingLine> getValidObjectSubTypeSourceLines() throws Exception {
+        List<SourceAccountingLine> retval = new ArrayList<SourceAccountingLine>();
+        retval.add(getValidObjectCodeSourceLine());
+        return retval;
+    }
+
+    private List<SourceAccountingLine> getInvalidObjectSubTypeSourceLines() throws Exception {
+        List<SourceAccountingLine> retval = new ArrayList<SourceAccountingLine>();
+        retval.add(LINE12.createSourceAccountingLine());
+        retval.add(LINE12.createSourceAccountingLine());
+        return retval;
+    }
+
+    private List<TargetAccountingLine> getInvalidObjectSubTypeTargetLines() throws Exception {
+        List<TargetAccountingLine> retval = new ArrayList<TargetAccountingLine>();
+        retval.add(LINE11.createTargetAccountingLine());
+        retval.add(getInvalidObjectSubTypeTargetLine());
+        return retval;
+    }
+
+    private List<TargetAccountingLine> getValidObjectSubTypeTargetLines() throws Exception {
+        List<TargetAccountingLine> retval = new ArrayList<TargetAccountingLine>();
+        retval.add(LINE11.createTargetAccountingLine());
+        retval.add(LINE11.createTargetAccountingLine());
+        return retval;
+    }
+
+    private SourceAccountingLine getValidObjectTypeSourceLine() throws Exception {
+        return LINE8.createSourceAccountingLine();
+    }
+
+    private SourceAccountingLine getInvalidObjectTypeSourceLine() throws Exception {
+        SourceAccountingLine line = LINE9.createSourceAccountingLine();
+        line.setFinancialObjectCode("9889");
+        line.refresh();
+        assertEquals("need FB obj type because it is invalid", "FB", line.getObjectCode().getFinancialObjectTypeCode());
+        return line;
+    }
+
+    private SourceAccountingLine getInvalidObjectCodeSourceLine() throws Exception {
+        return LINE10.createSourceAccountingLine();
+    }
+
+    private SourceAccountingLine getValidObjectCodeSourceLine() throws Exception {
+
+        VoucherSourceAccountingLine line = LINE11.createVoucherSourceAccountingLine();
+
+        // make sure that financial object type code is IN
+        line.getObjectCode().setFinancialObjectTypeCode("IN");
+        return line;
+    }
+
+    private TransferOfFundsDocument createDocumentWithInvalidObjectSubType() throws Exception {
+        TransferOfFundsDocument retval = createDocument();
+        retval.setSourceAccountingLines(getInvalidObjectSubTypeSourceLines());
+        retval.setTargetAccountingLines(getInvalidObjectSubTypeTargetLines());
+        return retval;
+    }
+
+    private TransferOfFundsDocument createDocumentUnbalanced() throws Exception {
+        TransferOfFundsDocument retval = createDocument();
+        retval.addSourceAccountingLine((SourceAccountingLine) makeObjectTypeAndSubTypeValid(getValidObjectCodeSourceLine()));
+        retval.addSourceAccountingLine((SourceAccountingLine) makeObjectTypeAndSubTypeValid(getValidObjectCodeSourceLine()));
+        retval.addTargetAccountingLine(getValidObjectSubTypeTargetLine());
+        return retval;
+    }
+    
+    private boolean testAddAccountingLineRule_IsObjectCodeAllowed(AccountingLine accountingLine, boolean expected) throws Exception {
+        Map<String, Validation> validations = SpringContext.getBeansOfType(Validation.class);
+        boolean result = true;
+        TransferOfFundsDocument document = createDocument();
+        
+        // do general validation
+        AccountingLineValueAllowedValidation validation = (AccountingLineValueAllowedValidation)validations.get("AccountingDocument-IsObjectCodeAllowed-DefaultValidation"); 
+        if (validation == null) throw new IllegalStateException("No object code value allowed validation");
+        validation.setAccountingDocumentForValidation(document);
+        validation.setAccountingLineForValidation(accountingLine);
+        result = validation.validate(null);
+        // do TF version validation
+        validation = (AccountingLineValueAllowedValidation)validations.get("TransferOfFunds-objectCodeValueAllowedValidation"); 
+        if (validation == null) throw new IllegalStateException("No TF specific object code value allowed validation");
+        validation.setAccountingDocumentForValidation(document);
+        validation.setAccountingLineForValidation(accountingLine);
+        result = validation.validate(null);
+        
+        return result;
+    }
+    
+    private void testAddAccountingLineRule_IsObjectTypeAllowed(AccountingLine accountingLine, boolean expected) throws Exception  {
+        Map<String, Validation> validations = SpringContext.getBeansOfType(Validation.class);
+        boolean result = true;
+        TransferOfFundsDocument document = createDocument();
+        AccountingLineValueAllowedValidation validation = (AccountingLineValueAllowedValidation)validations.get("AccountingDocument-IsObjectTypeAllowed-DefaultValidation"); 
+        if (validation == null) throw new IllegalStateException("No object type value allowed validation");
+        validation.setAccountingDocumentForValidation(document);
+        validation.setAccountingLineForValidation(accountingLine);
+        result = validation.validate(null);
+        assertEquals(expected, result);
+    }
+    
+    private void testAddAccountingLine_IsObjectSubTypeAllowed(AccountingLine accountingLine, boolean expected) throws Exception  {
+        Map<String, Validation> validations = SpringContext.getBeansOfType(Validation.class);
+        boolean result = true;
+        TransferOfFundsDocument document = createDocument();
+        AccountingLineValueAllowedValidation validation = (AccountingLineValueAllowedValidation)validations.get("TransferOfFunds-objectSubTypeValueAllowedValidation");
+        if (validation == null) throw new IllegalStateException("No object sub type value allowed validation");
+        validation.setAccountingDocumentForValidation(document);
+        validation.setAccountingLineForValidation(accountingLine);
+        result = validation.validate(null);
+        assertEquals(expected, result);
+    }
+}
+

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.netbeans.org/ns/project/1">
+    <type>org.netbeans.modules.ant.freeform</type>
+    <configuration>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/1">
+            <name>ua-kfs-5.3</name>
+        </general-data>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/2">
+            <!-- Do not use Project Properties customizer when editing this file manually. 
+ To prevent the customizer from showing, create nbproject/project.properties file and enter 
+auxiliary.show.customizer=false 
+property there. Adding 
+auxiliary.show.customizer.message=<message>
+ will show your customized message when someone attempts to open the customizer.  -->
+            <name>ua-kfs-5.3</name>
+            <properties/>
+            <folders>
+                <source-folder>
+                    <label>work/src</label>
+                    <type>java</type>
+                    <location>work/src</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>build/project</label>
+                    <type>java</type>
+                    <location>build/project</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>build/properties</label>
+                    <type>java</type>
+                    <location>build/properties</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>ua-kfs-5.3</label>
+                    <location>.</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+            </folders>
+            <ide-actions>
+                <action name="build">
+                    <target>run-dev</target>
+                </action>
+                <action name="clean">
+                    <target>dist-local</target>
+                </action>
+                <action name="javadoc">
+                    <target>add-javadoc</target>
+                </action>
+                <action name="run">
+                    <target>run-dev</target>
+                </action>
+                <action name="test">
+                    <target>test</target>
+                </action>
+                <action name="rebuild">
+                    <target>dist-local</target>
+                    <target>run-dev</target>
+                </action>
+            </ide-actions>
+            <view>
+                <items>
+                    <source-folder style="packages">
+                        <label>work/src</label>
+                        <location>work/src</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>build/project</label>
+                        <location>build/project</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>build/properties</label>
+                        <location>build/properties</location>
+                    </source-folder>
+                    <source-file>
+                        <location>build.xml</location>
+                    </source-file>
+                </items>
+                <context-menu>
+                    <ide-action name="build"/>
+                    <ide-action name="rebuild"/>
+                    <ide-action name="clean"/>
+                    <ide-action name="javadoc"/>
+                    <ide-action name="run"/>
+                    <ide-action name="test"/>
+                </context-menu>
+            </view>
+        </general-data>
+        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/3">
+            <compilation-unit>
+                <package-root>build/project</package-root>
+                <classpath mode="compile">build/rice-sources/rice-archetype-quickstart-2.1.9-sources.jar:build/rice-sources/rice-checkstyle-2.1.9-sources.jar:build/rice-sources/rice-client-contrib-2.1.9-sources.jar:build/rice-sources/rice-core-api-2.1.9-sources.jar:build/rice-sources/rice-core-framework-2.1.9-sources.jar:build/rice-sources/rice-core-impl-2.1.9-sources.jar:build/rice-sources/rice-core-service-api-2.1.9-sources.jar:build/rice-sources/rice-core-service-framework-2.1.9-sources.jar:build/rice-sources/rice-core-service-impl-2.1.9-sources.jar:build/rice-sources/rice-core-service-web-2.1.9-sources.jar:build/rice-sources/rice-core-web-2.1.9-sources.jar:build/rice-sources/rice-deploy-2.1.9-sources.jar:build/rice-sources/rice-development-tools-2.1.9-sources.jar:build/rice-sources/rice-edl-framework-2.1.9-sources.jar:build/rice-sources/rice-edl-impl-2.1.9-sources.jar:build/rice-sources/rice-impex-client-bootstrap-2.1.9-sources.jar:build/rice-sources/rice-impex-client-demo-2.1.9-sources.jar:build/rice-sources/rice-impex-master-2.1.9-sources.jar:build/rice-sources/rice-impex-server-bootstrap-2.1.9-sources.jar:build/rice-sources/rice-impex-server-demo-2.1.9-sources.jar:build/rice-sources/rice-impl-2.1.9-sources.jar:build/rice-sources/rice-it-internal-tools-2.1.9-sources.jar:build/rice-sources/rice-it-krms-2.1.9-sources.jar:build/rice-sources/rice-ken-api-2.1.9-sources.jar:build/rice-sources/rice-kew-api-2.1.9-sources.jar:build/rice-sources/rice-kew-framework-2.1.9-sources.jar:build/rice-sources/rice-kew-impl-2.1.9-sources.jar:build/rice-sources/rice-kim-api-2.1.9-sources.jar:build/rice-sources/rice-kim-framework-2.1.9-sources.jar:build/rice-sources/rice-kim-impl-2.1.9-sources.jar:build/rice-sources/rice-kim-ldap-2.1.9-sources.jar:build/rice-sources/rice-kns-2.1.9-sources.jar:build/rice-sources/rice-krad-app-framework-2.1.9-sources.jar:build/rice-sources/rice-krad-web-framework-2.1.9-sources.jar:build/rice-sources/rice-krms-api-2.1.9-sources.jar:build/rice-sources/rice-krms-framework-2.1.9-sources.jar:build/rice-sources/rice-krms-impl-2.1.9-sources.jar:build/rice-sources/rice-ksb-api-2.1.9-sources.jar:build/rice-sources/rice-ksb-client-impl-2.1.9-sources.jar:build/rice-sources/rice-ksb-server-impl-2.1.9-sources.jar:build/rice-sources/rice-ksb-web-2.1.9-sources.jar:build/rice-sources/rice-location-api-2.1.9-sources.jar:build/rice-sources/rice-location-framework-2.1.9-sources.jar:build/rice-sources/rice-location-impl-2.1.9-sources.jar:build/rice-sources/rice-location-web-2.1.9-sources.jar:build/rice-sources/rice-sampleapp-2.1.9-sources.jar:build/rice-sources/rice-serviceregistry-2.1.9-sources.jar:build/rice-sources/rice-sql-2.1.9-sources.jar:build/rice-sources/rice-standalone-2.1.9-sources.jar:build/rice-sources/rice-web-2.1.9-sources.jar</classpath>
+                <source-level>1.6</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>work/src</package-root>
+                <source-level>1.6</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>build/properties</package-root>
+                <source-level>1.6</source-level>
+            </compilation-unit>
+        </java-data>
+    </configuration>
+</project>
