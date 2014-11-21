@@ -37,7 +37,7 @@ public class PersonServiceImpl extends org.kuali.rice.kim.impl.identity.PersonSe
             criteria.put(EDS_ACTIVE_STATUS_KEY, value);
         }
 
-        List<EntityDefault> entities = getLdapIdentityService().findEntityDefaults(criteria, unbounded);
+        List<EntityDefault> entities = ldapIdentityService.findEntityDefaults(criteria, unbounded);
         if (!entities.isEmpty()) {
             for ( EntityDefault e : entities ) {
                 // get to get all principals for the identity as well

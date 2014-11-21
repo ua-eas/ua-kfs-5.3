@@ -27,15 +27,14 @@
     <bean id="arModuleConfiguration" parent="arModuleConfiguration-parentBean">
 		<property name="jobNames">
 			<list merge="true">
-                            <!--  **AZ UPGRADE 3.0-5.3** - don't run on trigger
-
 				<value>customerInvoiceDocumentBatchJob</value>
-                                -->
 			</list>
 		</property>
 		<property name="triggerNames">
 			<list merge="true">
+                            <!--  **AZ UPGRADE 3.0-5.3** - don't run on trigger
 				<value>customerInvoiceDocumentBatchJobTrigger</value>
+                                -->
 			</list>
 		</property>
     

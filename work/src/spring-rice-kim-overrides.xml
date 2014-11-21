@@ -32,7 +32,7 @@
 
   <!-- **AZ UPGRADE 3.0-5.3** - enable ldap -->
   <import resource="classpath*:/org/kuali/rice/kim/config/KIMLdapSpringBeans.xml" />
-  <import resource="spring-ldap.xml" />
+  <import resource="classpath:spring-ldap.xml" />
   
  <bean id="kimPermissionService" class="edu.arizona.rice.kim.impl.permisson.PermissionServiceImpl"
     p:businessObjectService-ref="rice.kim.import.businessObjectService"
@@ -42,4 +42,5 @@
     p:cacheManager-ref="kimLocalCacheManager">
      <property name="identityService" ref="kimIdentityDelegateService"/>
  </bean>
+ 
 </beans>
