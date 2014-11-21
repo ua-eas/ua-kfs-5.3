@@ -23,8 +23,9 @@ import org.kuali.rice.kim.api.KimConstants;
 import org.kuali.rice.kim.api.identity.IdentityService;
 import org.kuali.rice.kim.api.identity.entity.Entity;
 
-
+// **AZ UPGRADE 3.0-5.3** 
 public class PermissionServiceImpl extends org.kuali.rice.kim.impl.permission.PermissionServiceImpl {
+    private static final String KUALI_USER_ROLE_ID = "1";
     private IdentityService identityService;
 
     @Override
@@ -34,18 +35,33 @@ public class PermissionServiceImpl extends org.kuali.rice.kim.impl.permission.Pe
         if (KimConstants.PermissionNames.LOG_IN.equals(permissionName)) {
             retval = isAuthorizedToLogin(principalId);
         } else {
-            List <String> roles = getRoleIdsForPermission(namespaceCode, permissionName);
+            retval = super.isAuthorized(principalId, namespaceCode, permissionName, qualification);
 
-            if ((roles != null) && roles.contains("1")) {
-                retval = true;
-            } else {
-                retval = super.isAuthorized(principalId, namespaceCode, permissionName, qualification);
+            if (!retval) {
+                retval = isKualiUserAuthorized(getRoleIdsForPermission(namespaceCode, permissionName));
             }
         }
         
         return retval;
     }
 
+    @Override
+    public boolean isAuthorizedByTemplate(String principalId, String namespaceCode, String permissionTemplateName, 
+            Map<String, String> permissionDetails, Map<String, String> qualification) throws RiceIllegalArgumentException {
+        boolean retval = super.isAuthorizedByTemplate(principalId, namespaceCode, permissionTemplateName, permissionDetails, qualification);
+        
+        if (!retval) {
+            retval = isKualiUserAuthorized(getRoleIdsForPermissionTemplate(namespaceCode, permissionTemplateName, permissionDetails));
+        }
+        
+        return retval;
+    }
+
+    private boolean isKualiUserAuthorized(List <String> roleids) {
+        return ((roleids != null) && roleids.contains(KUALI_USER_ROLE_ID));
+    }
+    
+    
     private boolean isAuthorizedToLogin(String principalId) {
         Entity e = identityService.getEntityByPrincipalId(principalId);
         return (e != null);

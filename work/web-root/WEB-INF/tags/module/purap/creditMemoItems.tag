@@ -262,8 +262,7 @@
 		</c:if>
 	</c:if>
 </logic:iterate>
-
-<c:if test="${(fullEntryMode) and (clearAllTaxes) and (purapTaxEnabled)}">
+<c:if test="${(fullEntryMode) && (clearAllTaxes) && (purapTaxEnabled)}">
 	<tr>
 		<th height=30 colspan="${mainColumnCount}">
 			<html:image 

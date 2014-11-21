@@ -280,8 +280,6 @@ public class EmployeeDerivedRoleTypeServiceImpl extends org.kuali.kfs.sys.identi
                     } 
                 }
             }
-System.out.println("--------------------->user=" + principalId + ", role=" + roleName + ", retval=" + retval + ", active=" + entity.isActive());
-
         }
         
         return retval;

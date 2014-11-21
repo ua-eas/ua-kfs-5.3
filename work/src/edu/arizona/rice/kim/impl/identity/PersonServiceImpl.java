@@ -20,8 +20,10 @@ import org.kuali.rice.kim.api.identity.Person;
 import org.kuali.rice.kim.api.identity.entity.EntityDefault;
 import org.kuali.rice.kim.api.identity.principal.Principal;
 import org.kuali.rice.kim.impl.KIMPropertyConstants;
+import org.kuali.rice.kim.impl.identity.PersonImpl;
 import org.kuali.rice.kim.service.LdapIdentityService;
 
+// **AZ UPGRADE 3.0-5.3** 
 public class PersonServiceImpl extends org.kuali.rice.kim.impl.identity.PersonServiceImpl {
     private static Logger LOG = Logger.getLogger(PersonServiceImpl.class);
     private LdapIdentityService ldapIdentityService;
@@ -31,6 +33,7 @@ public class PersonServiceImpl extends org.kuali.rice.kim.impl.identity.PersonSe
     @Override
 	protected List<Person> findPeopleInternal(Map<String,String> criteria, boolean unbounded) {
         List<Person> retval = new ArrayList<Person>();
+
         if(criteria.containsKey(KIMPropertyConstants.Person.ACTIVE)){
             String value = criteria.get(KIMPropertyConstants.Person.ACTIVE);
             criteria.remove(KIMPropertyConstants.Person.ACTIVE);
@@ -39,10 +42,12 @@ public class PersonServiceImpl extends org.kuali.rice.kim.impl.identity.PersonSe
 
         List<EntityDefault> entities = ldapIdentityService.findEntityDefaults(criteria, unbounded);
         if (!entities.isEmpty()) {
-            for ( EntityDefault e : entities ) {
+            for (EntityDefault e : entities) {
                 // get to get all principals for the identity as well
                 for (Principal p : e.getPrincipals() ) {
-                    retval.add(convertEntityToPerson(e, p));
+                    PersonImpl person = convertEntityToPerson(e, p);
+                    person.setActive(e.isActive());
+                    retval.add(person);
                 }
             }
         }
