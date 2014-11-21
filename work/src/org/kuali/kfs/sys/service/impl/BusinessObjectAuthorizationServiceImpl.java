@@ -20,7 +20,6 @@ package org.kuali.kfs.sys.service.impl;
 
 import java.util.Collections;
 import java.util.HashMap;
-
 import org.apache.commons.lang.StringUtils;
 import org.kuali.rice.core.api.config.property.ConfigurationService;
 import org.kuali.rice.kim.api.KimConstants;
@@ -58,22 +57,25 @@ public class BusinessObjectAuthorizationServiceImpl extends org.kuali.rice.kns.s
      */
     @Override
     protected void considerBusinessObjectFieldUnmaskAuthorization(Object dataObject, Person user, BusinessObjectRestrictions businessObjectRestrictions, String propertyPrefix, Document document) {
-        final DataDictionaryEntryBase objectEntry = (dataObject instanceof org.kuali.rice.krad.document.Document) ?
-                getDataDictionaryService().getDataDictionary().getDocumentEntry(getDataDictionaryService().getDocumentTypeNameByClass(dataObject.getClass())) :
-                getDataDictionaryService().getDataDictionary().getBusinessObjectEntry(dataObject.getClass().getName());
+        //  **AZ UPGRADE 3.0-5.3** - null data object causes the application to throw NullPointerException
+        if (dataObject != null) {
+            final DataDictionaryEntryBase objectEntry = (dataObject instanceof org.kuali.rice.krad.document.Document) ?
+                    getDataDictionaryService().getDataDictionary().getDocumentEntry(getDataDictionaryService().getDocumentTypeNameByClass(dataObject.getClass())) :
+                    getDataDictionaryService().getDataDictionary().getBusinessObjectEntry(dataObject.getClass().getName());
 
-        BusinessObject permissionTarget = (dataObject instanceof BusinessObject) ? (BusinessObject)dataObject : document;
+            BusinessObject permissionTarget = (dataObject instanceof BusinessObject) ? (BusinessObject)dataObject : document;
 
-        for (String attributeName : objectEntry.getAttributeNames()) {
-            AttributeDefinition attributeDefinition = objectEntry.getAttributeDefinition(attributeName);
-            if (attributeDefinition.getAttributeSecurity() != null) {
-                if (attributeDefinition.getAttributeSecurity().isMask() &&
-                        !canFullyUnmaskFieldForBusinessObject(user, dataObject.getClass(), attributeName, permissionTarget, document)) {
-                    businessObjectRestrictions.addFullyMaskedField(propertyPrefix + attributeName, attributeDefinition.getAttributeSecurity().getMaskFormatter());
-                }
-                if (attributeDefinition.getAttributeSecurity().isPartialMask() &&
-                        !canPartiallyUnmaskFieldForBusinessObject(user, dataObject.getClass(), attributeName, permissionTarget, document)) {
-                    businessObjectRestrictions.addPartiallyMaskedField(propertyPrefix + attributeName, attributeDefinition.getAttributeSecurity().getPartialMaskFormatter());
+            for (String attributeName : objectEntry.getAttributeNames()) {
+                AttributeDefinition attributeDefinition = objectEntry.getAttributeDefinition(attributeName);
+                if (attributeDefinition.getAttributeSecurity() != null) {
+                    if (attributeDefinition.getAttributeSecurity().isMask() &&
+                            !canFullyUnmaskFieldForBusinessObject(user, dataObject.getClass(), attributeName, permissionTarget, document)) {
+                        businessObjectRestrictions.addFullyMaskedField(propertyPrefix + attributeName, attributeDefinition.getAttributeSecurity().getMaskFormatter());
+                    }
+                    if (attributeDefinition.getAttributeSecurity().isPartialMask() &&
+                            !canPartiallyUnmaskFieldForBusinessObject(user, dataObject.getClass(), attributeName, permissionTarget, document)) {
+                        businessObjectRestrictions.addPartiallyMaskedField(propertyPrefix + attributeName, attributeDefinition.getAttributeSecurity().getPartialMaskFormatter());
+                    }
                 }
             }
         }

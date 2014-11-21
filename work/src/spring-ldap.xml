@@ -1,0 +1,217 @@
+<?xml version='1.0' encoding='UTF-8' ?> 
+<!-- was: <?xml version="1.0" encoding="UTF-8"?> -->
+<!--
+ Copyright 2014 The Kuali Foundation
+
+ Licensed under the Educational Community License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.opensource.org/licenses/ecl2.php
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!--  **AZ UPGRADE 3.0-5.3** - enable ldap -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+            http://www.springframework.org/schema/util 
+            http://www.springframework.org/schema/util/spring-util-2.0.xsd">
+
+    <bean id="contextSource"
+          class="org.springframework.ldap.core.support.LdapContextSource">
+        <property name="url" value="${rice.ldap.url}" />
+        <property name="base" value="${rice.ldap.base}" />
+        <property name="authenticationSource" ref="authenticationSource" />
+    </bean>
+    
+    <bean id="authenticationSource"
+          class="org.springframework.ldap.authentication.DefaultValuesAuthenticationSourceDecorator">
+        <property name="target" ref="springSecurityAuthenticationSource" />
+        <property name="defaultUser" value="${rice.ldap.username}" />
+        <property name="defaultPassword" value="${rice.ldap.password}" />
+    </bean>
+
+    <bean id="springSecurityAuthenticationSource"
+          class="org.springframework.security.ldap.authentication.SpringSecurityAuthenticationSource" />
+
+    <bean id="ldapTemplate" class="org.springframework.ldap.core.LdapTemplate">
+        <constructor-arg ref="contextSource" />
+    </bean>
+
+    <bean id="kimConstants" class="org.kuali.rice.kim.util.ConstantsImpl">
+        <property name="kimLdapIdProperty"         value="uaid" />
+        <property name="kimLdapNameProperty"       value="uid" />
+        <property name="snLdapProperty"            value="sn" />
+        <property name="givenNameLdapProperty"     value="givenName" />
+        <property name="entityIdKimProperty"       value="entityId" />
+        <property name="employeeMailLdapProperty"  value="mail" />
+        <property name="employeePhoneLdapProperty" value="employeePhone" />
+        <property name="defaultCountryCode"        value="1" />
+        <property name="mappedParameterName"       value="KIM_TO_EDS_FIELD_MAPPINGS" />
+        <property name="mappedValuesName"          value="KIM_TO_EDS_VALUE_MAPPINGS" />
+        <property name="parameterNamespaceCode"    value="KFS-SYS" />
+        <property name="parameterDetailTypeCode"   value="Lookup" />
+        <property name="personEntityTypeCode"      value="PERSON" />
+        <property name="employeeIdProperty"        value="emplId" />
+        <property name="departmentLdapProperty"    value="employeeOfficialOrg" />  
+        <property name="employeeTypeProperty"      value="employeeType" />
+        <property name="employeeStatusProperty"    value="employeeStatus" />
+        <property name="affiliationLdapProperty"   value="affiliationProperty" />
+        <property name="primaryAffiliationLdapProperty"   value="eduPersonPrimaryAffiliation" />
+        <property name="defaultCampusCode"         value="MC" />
+        <property name="defaultChartCode"          value="UA" />
+        <property name="taxExternalIdTypeCode"     value="TAX" />
+        <property name="externalIdProperty"        value="externalIdentifiers.externalId" />
+        <property name="externalIdTypeProperty"    value="externalIdentifiers.externalIdentifierTypeCode" />
+        <property name="affiliationMappings"       value="staff=STAFF,faculty=FCLTY,employee=STAFF,student=STDNT,affilate=AFLT"/>
+        <property name="employeeAffiliationCodes"  value="STAFF,FCLTY" />
+        <property name="testPrincipalNames">
+            <list>
+                <value>kfs-test-sys1</value>
+                <value>kfs-test-ar1</value>
+                <value>kfs-test-ar2</value>
+                <value>kfs-test-bc1</value>
+                <value>kfs-test-bc2</value>
+                <value>kfs-test-cm1</value>
+                <value>kfs-test-cm2</value>
+                <value>kfs-test-cg1</value>
+                <value>kfs-test-cg2</value>
+                <value>kfs-test-fp1</value>
+                <value>kfs-test-fp2</value>
+                <value>kfs-test-fp3</value>
+                <value>kfs-test-fp4</value>
+                <value>kfs-test-fp5</value>
+                <value>kfs-test-fp6</value>
+                <value>kfs-test-gl1</value>
+                <value>kfs-test-gl2</value>
+                <value>kfs-test-pdp1</value>
+                <value>kfs-test-pdp2</value>
+                <value>kfs-test-pur1</value>
+                <value>kfs-test-pur2</value>
+                <value>kfs-test-pur3</value>
+                <value>kfs-test-pur4</value>
+                <value>kfs-test-pur5</value>
+                <value>kfs-test-pur6</value>
+                <value>kfs-test-pur7</value>
+                <value>kfs-test-pur8</value>
+                <value>kfs-test-pur9</value>
+                <value>kfs-test-pur10</value>
+                <value>kfs-test-sys2</value>      
+                <value>kfs-test-sys3</value>
+                <value>kfs-test-sys4</value>
+                <value>kfs-test-sys5</value>
+                <value>kfs-test-sys6</value>
+                <value>kfs-test-sys7</value>
+                <value>kfs-test-sys8</value>
+                <value>kfs-test-sys9</value>
+                <value>kfs-test-sys10</value>
+                <value>kfs-test-sys11</value>
+                <value>kfs-test-sys12</value>
+                <value>kfs-test-sys13</value>
+                <value>kfs-test-sys14</value>
+                <value>kfs-test-sys15</value>
+                <value>kfs-test-sys16</value>
+                <value>kfs-test-sys17</value>
+                <value>kfs-test-sys18</value>
+                <value>kfs-test-sys19</value>
+                <value>kfs-test-sys20</value>
+                <value>kfs-test-sys21</value>
+                <value>kfs-test-sys22</value>
+                <value>kfs-test-sys23</value>
+                <value>kfs-test-sys24</value>
+                <value>kfs-test-sys25</value>
+                <value>kfs-test-sys26</value>
+                <value>kfs-test-sys27</value>
+                <value>kfs-test-sys28</value>
+                <value>kfs-test-sys29</value>
+                <value>kfs-test-sys30</value>
+                <value>kfs-test-sec1</value>
+                <value>kfs-test-sec2</value>
+                <value>kfs-test-sec3</value>
+                <value>kfs-test-sec4</value>
+                <value>kfs-test-sec5</value>
+                <value>kfs-test-sec6</value>
+                <value>kfs-test-sec7</value>
+                <value>kfs-test-sec8</value>
+                <value>kfs-test-sec9</value>
+                <value>kfs-test-sec10</value>
+                <value>kfs-test-sec11</value>
+                <value>kfs-test-sec12</value>
+                <value>kfs-test-sec13</value>
+                <value>kfs-test-sec14</value>
+                <value>kfs-test-sec15</value>
+                <value>kfs-test-sec16</value>
+                <value>kfs-test-sec17</value>
+                <value>kfs-test-sec18</value>
+                <value>kfs-test-sec19</value>
+                <value>kfs-test-sec20</value>
+                <value>kfs-test-sec21</value> 
+                <value>kfs-test-sec22</value>
+                <value>kfs-test-sec23</value>
+                <value>kfs-test-vnd1</value>
+                <value>kfs-test-vnd2</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="edsConstants" class="edu.arizona.kuali.sys.identity.EdsConstants">
+        <!-- Keys into the EDS Schema -->
+        <property name="uaIdContextKey"                                value="uaId" />
+        <property name="uidContextKey"                                 value="uid" />
+        <property name="personAffiliationContextKey"                   value="eduPersonAffiliation" />
+        <property name="employeeDeptCodeContextKey"                    value="employeePrimaryDept" />
+        <property name="employeeStatusCodeContextKey"                  value="employeeStatus" />
+        <property name="employeeTypeCodeContextKey"                    value="employeeType" />
+        <property name="dccRelationContextKey"                         value="dccRelation" />
+        <property name="givenNameContextKey"                           value="givenName" />
+        <property name="cnContextKey"                                  value="cn" />
+        <property name="snContextKey"                                  value="sn" />
+        <property name="employeePhoneContextKey"                       value="employeePhone" />
+        <property name="mailContextKey"                                value="mail" />
+        <property name="employeePrimaryDeptNameContextKey"             value="employeePrimaryDeptName" />
+        <property name="employeePoBoxContextKey"                       value="employeePoBox" />
+        <property name="employeeCityContextKey"                        value="employeeCity" />
+        <property name="employeeStateContextKey"                       value="employeeState" />
+        <property name="employeeZipContextKey"                         value="employeeZip" />
+        <property name="emplIdContextKey"                              value="emplId" />
+        <!-- KFS Settings for EDS Params -->
+        <property name="parameterNamespaceCode"                         value="KFS-SYS" />
+        <property name="parameterDetailTypeCode"                        value="Lookup" />
+        <!-- Keys into KFS for params containing EDS values  -->
+        <property name="edsRespectedAndOrderedAffsParamKey"            value="EDS_RESPECTED_AND_ORDERED_AFFS" />
+        <property name="edsUnrespectedAndOrderedAffsParamKey"          value="EDS_UNRESPECTED_AND_ORDERED_AFFS" />
+        <property name="edsNonEmployeeAffsParamKey"                    value="EDS_NON_EMPLOYEE_AFFS" />
+        <property name="edsProfessionalAffsParamKey"                   value="EDS_PROFESSIONAL_AFFS" />
+        <property name="edsOrderedActiveStatusIndicatorsParamKey"      value="EDS_ORDERED_ACTIVE_STATUS_INDICATORS" />
+        <property name="edsEmployeeTypesParamKey"                      value="EDS_EMPLOYEE_TYPES" />
+        <property name="edsDefaultEmployeeTypeParamKey"                value="EDS_DEFAULT_EMPLOYEE_TYPE" />
+        <property name="edsRestrictedEmployeeTypesParamKey"            value="EDS_RESTRICTED_EMPLOYEE_TYPES" />
+        <!-- The delimeter to be used for EDS values stored in KFS Parameters -->
+        <property name="kfsParamDelimiter"                             value=";" />
+    </bean>
+
+    <bean id="kimRoleTypeService" class="edu.arizona.kuali.sys.identity.EmployeeDerivedRoleTypeServiceImpl">
+        <property name="edsConstants" ref="edsConstants"/>
+    </bean>
+
+    <bean id="personService" class="edu.arizona.rice.kim.impl.identity.PersonServiceImpl">
+        <property name="ldapIdentityService" ref="kimIdentityDelegateService"/>
+        <property name="personEntityTypeCodes">
+            <list>
+                <value>PERSON</value>
+                <value>SYSTEM</value>
+            </list>
+        </property>
+    </bean>
+</beans>
+   
+
