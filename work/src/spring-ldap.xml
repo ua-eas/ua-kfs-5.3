@@ -65,7 +65,7 @@
         <property name="departmentLdapProperty"    value="employeePrimaryDept" />  
         <property name="employeeTypeProperty"      value="employeeType" />
         <property name="employeeStatusProperty"    value="employeeStatus" />
-        <property name="affiliationLdapProperty"   value="affiliationProperty" />
+        <property name="affiliationLdapProperty"   value="eduPersonPrimaryAffiliation" />
         <property name="primaryAffiliationLdapProperty"   value="eduPersonPrimaryAffiliation" />
         <property name="defaultCampusCode"         value="MC" />
         <property name="defaultChartCode"          value="UA" />
