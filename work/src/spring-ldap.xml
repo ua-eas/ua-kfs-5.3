@@ -76,8 +76,6 @@
         <property name="employeeAffiliationCodes"  value="STAFF,FCLTY" />
     </bean>
 
-    <bean id="kimRoleTypeService" class="org.kuali.kfs.sys.identity.EmployeeDerivedRoleTypeServiceImpl"/>
-
     <bean id="personService" class="edu.arizona.rice.kim.impl.identity.PersonServiceImpl">
         <property name="ldapIdentityService" ref="kimIdentityDelegateService"/>
         <property name="personEntityTypeCodes">
@@ -85,6 +83,13 @@
                 <value>PERSON</value>
                 <value>SYSTEM</value>
             </list>
+        </property>
+        <property name="systemUsers"> 
+            <set>
+                <value>kfs</value>
+                <value>kr</value>
+                <value>admin</value>
+            </set>
         </property>
     </bean>
 </beans>

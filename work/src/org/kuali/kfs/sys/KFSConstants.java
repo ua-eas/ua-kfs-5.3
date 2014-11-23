@@ -20,7 +20,6 @@ package org.kuali.kfs.sys;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
@@ -86,7 +85,9 @@ public class KFSConstants {
     //TODO: eventually this should be removed and the system user should be pulled from a parameter
     // right now, you HAVE to make sure that a 'kfs' user exists in your system, either in the DB
     // or in an external system such as LDAP if implemented
-    public static final String SYSTEM_USER = "kfs";
+    
+    // **AZ UPGRADE 3.0-5.3** - change from "kfs" to "kfs-sys-user" - this is in our ldap
+    public static final String SYSTEM_USER = "kfs-sys-user";
 
     public static final String ENVIRONMENT_KEY = "environment";
     public static final String LOG4J_SETTINGS_FILE_KEY = "log4j.settings.file";

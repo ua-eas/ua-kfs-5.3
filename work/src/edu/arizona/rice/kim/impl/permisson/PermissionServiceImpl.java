@@ -32,7 +32,9 @@ public class PermissionServiceImpl extends org.kuali.rice.kim.impl.permission.Pe
         // UA UPGRADE - if logging in and user is active employee the let them in
         if (KimConstants.PermissionNames.LOG_IN.equals(permissionName)) {
             retval = isAuthorizedToLogin(principalId);
-        } 
+        } else {
+            retval = super.isAuthorized(principalId, namespaceCode, permissionName, qualification);
+        }
 
         return retval;
     }
@@ -45,4 +47,4 @@ public class PermissionServiceImpl extends org.kuali.rice.kim.impl.permission.Pe
     public void setIdentityService(IdentityService identityService) {
         this.identityService = identityService;
     }
-}
+}    

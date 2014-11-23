@@ -31,7 +31,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.kuali.kfs.coa.businessobject.Account;
@@ -1894,7 +1893,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                     }
 
                     purapService.saveDocumentNoValidation(req);
-                    createPurchaseOrderDocument(req, KFSConstants.SYSTEM_USER, detail.getContractManagerCode());
+                    // **AZ UPGRADE 3.0-5.3** - not certain why I had to do this
+                    // but I changed Constants.SYSTEM_USER from  from "kfs" to "kfs-sys-user" 
+                    // and one in createPurchaseOrderDocument it still showed "kfs"
+                    // but this fixed it
+                    String user = KFSConstants.SYSTEM_USER;
+                    createPurchaseOrderDocument(req, user, detail.getContractManagerCode());
                 }
             }
 

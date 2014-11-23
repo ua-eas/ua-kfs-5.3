@@ -15,6 +15,7 @@ package edu.arizona.rice.kim.impl.identity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import org.kuali.rice.kim.api.identity.Person;
 import org.kuali.rice.kim.api.identity.entity.EntityDefault;
@@ -27,6 +28,7 @@ import org.kuali.rice.kim.service.LdapIdentityService;
 public class PersonServiceImpl extends org.kuali.rice.kim.impl.identity.PersonServiceImpl {
     private static Logger LOG = Logger.getLogger(PersonServiceImpl.class);
     private LdapIdentityService ldapIdentityService;
+    private Set<String> systemUsers;
     
     protected static final String EDS_ACTIVE_STATUS_KEY = "principals.active";
     
@@ -55,11 +57,28 @@ public class PersonServiceImpl extends org.kuali.rice.kim.impl.identity.PersonSe
         return retval;
     }
 
-    public LdapIdentityService getLdapIdentityService() {
-        return ldapIdentityService;
+    @Override
+    public Person getPersonByPrincipalName(String principalName) {
+        Person retval = null;
+        // this is here to handle condition where ldap user 
+        // has same principal name as system user
+        if (systemUsers.contains(principalName)) {
+            EntityDefault e = ldapIdentityService.getSystemEntityByPrincipalName(principalName);
+            if (e != null) {
+                retval = convertEntityToPerson(e, e.getPrincipals().get(0));
+            }
+        } else {
+            retval =  super.getPersonByPrincipalName(principalName);
+        }
+        
+        return retval;
     }
 
     public void setLdapIdentityService(LdapIdentityService ldapIdentityService) {
         this.ldapIdentityService = ldapIdentityService;
+    }
+
+    public void setSystemUsers(Set<String> systemUsers) {
+        this.systemUsers = systemUsers;
     }
 }

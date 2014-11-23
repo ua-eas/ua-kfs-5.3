@@ -73,16 +73,21 @@
 	<target name="filter-libraries" depends="init-properties,check-rice-lib">
 		<!-- Copies over institutional lib libraries to the application's library directory -->
 		<mkdir dir="${lib.directory}" />
-				
-		<copy todir="${lib.directory}" verbose="true">
+		<copy todir="${lib.directory}" verbose="true" overwrite="true">
 			<fileset dir="${build.rice.lib.directory}">
 			    <include name="*.jar"/>
 			</fileset>
+		</copy>
+                
+                <!-- **AZ UPGRADE 3.0-5.3** want to overwrite foundation rice files -->
+		<echo message="copying files from ${build.kfs.lib.directory} to ${lib.directory}"/>
+		<copy todir="${lib.directory}" verbose="true" overwrite="true">
 			<fileset dir="${build.kfs.lib.directory}">
 			    <include name="*.jar"/>
 			</fileset>
 		</copy>
-		<if>
+
+                <if>
 			<isset property="institution.lib.directory" />
 			<then>
 				<copy todir="${lib.directory}" overwrite="true">
