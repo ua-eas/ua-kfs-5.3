@@ -12,10 +12,11 @@
  */
 package edu.arizona.rice.kim.impl.identity;
 
+import edu.arizona.rice.kim.api.identity.PersonService;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.apache.log4j.Logger;
 import org.kuali.rice.kim.api.identity.Person;
 import org.kuali.rice.kim.api.identity.entity.EntityDefault;
@@ -25,10 +26,11 @@ import org.kuali.rice.kim.impl.identity.PersonImpl;
 import org.kuali.rice.kim.service.LdapIdentityService;
 
 // **AZ UPGRADE 3.0-5.3** 
-public class PersonServiceImpl extends org.kuali.rice.kim.impl.identity.PersonServiceImpl {
+public class PersonServiceImpl 
+    extends org.kuali.rice.kim.impl.identity.PersonServiceImpl 
+    implements PersonService {
     private static Logger LOG = Logger.getLogger(PersonServiceImpl.class);
     private LdapIdentityService ldapIdentityService;
-    private Set<String> systemUsers;
     
     protected static final String EDS_ACTIVE_STATUS_KEY = "principals.active";
     
@@ -57,28 +59,21 @@ public class PersonServiceImpl extends org.kuali.rice.kim.impl.identity.PersonSe
         return retval;
     }
 
-    @Override
-    public Person getPersonByPrincipalName(String principalName) {
-        Person retval = null;
-        // this is here to handle condition where ldap user 
-        // has same principal name as system user
-        if (systemUsers.contains(principalName)) {
-            EntityDefault e = ldapIdentityService.getSystemEntityByPrincipalName(principalName);
-            if (e != null) {
-                retval = convertEntityToPerson(e, e.getPrincipals().get(0));
-            }
-        } else {
-            retval =  super.getPersonByPrincipalName(principalName);
-        }
-        
-        return retval;
-    }
-
     public void setLdapIdentityService(LdapIdentityService ldapIdentityService) {
         this.ldapIdentityService = ldapIdentityService;
     }
 
-    public void setSystemUsers(Set<String> systemUsers) {
-        this.systemUsers = systemUsers;
+    // UAF-6 - Performance improvements to improve user experience for AWS deployment 
+    @Override
+    public List<Person> getPeople(Collection<String> principalIds) {
+        List <Person> retval = new ArrayList<Person>();
+        List <EntityDefault> entityDefaults = ldapIdentityService.getEntityDefaultsByPrincipalIds(principalIds);
+        for (EntityDefault ed : entityDefaults) {
+            if ((ed.getPrincipals() != null) && !ed.getPrincipals().isEmpty()) {
+                retval.add(convertEntityToPerson(ed, ed.getPrincipals().get(0)));
+            }
+        }
+        
+        return retval;
     }
 }

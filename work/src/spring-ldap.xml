@@ -16,7 +16,7 @@
  limitations under the License.
 -->
 
-<!-- UA UPGRADE - enable ldap -->
+<!-- UA UPGRADE - enable ldap for upgrade -->
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:p="http://www.springframework.org/schema/p"
@@ -33,15 +33,11 @@
         <property name="authenticationSource" ref="authenticationSource" />
     </bean>
     
-    <bean id="authenticationSource"
-          class="org.springframework.ldap.authentication.DefaultValuesAuthenticationSourceDecorator">
-        <property name="target" ref="springSecurityAuthenticationSource" />
-        <property name="defaultUser" value="${rice.ldap.username}" />
-        <property name="defaultPassword" value="${rice.ldap.password}" />
+    <!-- UAF-6 - Performance improvements to improve user experience for AWS deployment -->
+    <bean id="authenticationSource" class="edu.arizona.rice.kim.ldap.authentication.KualiAuthenticationSource" >
+        <property name="principal" value="${rice.ldap.username}" />
+        <property name="credentials" value="${rice.ldap.password}" />
     </bean>
-
-    <bean id="springSecurityAuthenticationSource"
-          class="org.springframework.security.ldap.authentication.SpringSecurityAuthenticationSource" />
 
     <bean id="ldapTemplate" class="org.springframework.ldap.core.LdapTemplate">
         <constructor-arg ref="contextSource" />
@@ -119,13 +115,6 @@
                 <value>PERSON</value>
                 <value>SYSTEM</value>
             </list>
-        </property>
-        <property name="systemUsers"> 
-            <set>
-                <value>kfs</value>
-                <value>kr</value>
-                <value>admin</value>
-            </set>
         </property>
     </bean>
 </beans>

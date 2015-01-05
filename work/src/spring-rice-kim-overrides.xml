@@ -17,6 +17,7 @@
   - You should have received a copy of the GNU Affero General Public License
   - along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -->
+<!-- **AZ UPGRADE 3.0-5.3** - enable ldap -->
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:p="http://www.springframework.org/schema/p"
@@ -30,10 +31,9 @@
                            http://www.springframework.org/schema/aop/spring-aop-3.0.xsd" default-lazy-init="false">
 
 
-    <!-- **AZ UPGRADE 3.0-5.3** - enable ldap -->
     <import resource="classpath*:/org/kuali/rice/kim/config/KIMLdapSpringBeans.xml" />
     <import resource="classpath:spring-ldap.xml" />
-  
+
     <bean id="kimPermissionService" class="edu.arizona.rice.kim.impl.permisson.PermissionServiceImpl"
        p:businessObjectService-ref="rice.kim.import.businessObjectService"
        p:criteriaLookupService-ref="rice.kim.import.criteriaLookupService"
@@ -43,8 +43,13 @@
         <property name="identityService" ref="kimIdentityDelegateService"/>
     </bean>
     
-        <!-- **AZ UPGRADE 3.0-5.3** -->
     <bean id="kimRoleTypeService" class=" edu.arizona.kfs.sys.identity.EmployeeDerivedRoleTypeServiceImpl">
         <property name="edsConstants" ref="edsConstants"/>
+    </bean>
+    
+    <!-- UAF-6 - Performance improvements to improve user experience for AWS deployment -->
+     <bean id="kimIdentityService" class="edu.arizona.rice.kim.impl.identity.IdentityCurrentAndArchivedServiceImpl">
+        <constructor-arg ref="kimIdentityArchiveService"/>
+        <constructor-arg ref="kimIdentityDelegateService"/>
     </bean>
 </beans>

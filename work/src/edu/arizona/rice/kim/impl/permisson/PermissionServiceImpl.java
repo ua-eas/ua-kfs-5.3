@@ -17,6 +17,8 @@
 package edu.arizona.rice.kim.impl.permisson;
 
 import java.util.Map;
+import org.kuali.kfs.sys.context.SpringContext;
+import org.kuali.rice.core.api.config.property.ConfigurationService;
 import org.kuali.rice.core.api.exception.RiceIllegalArgumentException;
 import org.kuali.rice.kim.api.KimConstants;
 import org.kuali.rice.kim.api.identity.IdentityService;
@@ -25,7 +27,7 @@ import org.kuali.rice.kim.api.identity.entity.Entity;
 // **AZ UPGRADE 3.0-5.3** 
 public class PermissionServiceImpl extends org.kuali.rice.kim.impl.permission.PermissionServiceImpl {
     private IdentityService identityService;
-
+    private ConfigurationService configurationService;
     @Override
     public boolean isAuthorized(String principalId, String namespaceCode, String permissionName, Map<String, String> qualification) throws RiceIllegalArgumentException {
         boolean retval = false;
@@ -46,5 +48,13 @@ public class PermissionServiceImpl extends org.kuali.rice.kim.impl.permission.Pe
     
     public void setIdentityService(IdentityService identityService) {
         this.identityService = identityService;
+    }
+
+    public ConfigurationService getConfigurationService() {
+        if (configurationService == null) {
+            configurationService = SpringContext.getBean(ConfigurationService.class);
+        }
+        
+        return configurationService;
     }
 }    
