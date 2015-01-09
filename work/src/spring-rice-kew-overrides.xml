@@ -39,6 +39,9 @@
 
         <!-- set this to false to use default (legacy DocumentSearchGenerator) search logic -->
         <property name="useInternalSearch" value="true"/>
+        
+        <!-- set to true to allow any db specific code (hints such as oracle PARALLEL) to be used -->
+        <property name="databaseSpecificCodeAllowed" value="true"/>
     </bean>
     
     <bean id="documentSearchCriteriaProcessor" class="org.kuali.rice.kew.docsearch.DocumentSearchCriteriaProcessorKEWAdapter"/>

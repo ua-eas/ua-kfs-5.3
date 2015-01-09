@@ -50,11 +50,13 @@ public class DocumentSearchCriteriaBoLookupableHelperService
             pmap.put(bo.getInitiatorPrincipalId(), bo);
         }
 
-        List <Person> persons = getPersonService().getPeople(pmap.keySet());
+        if (!pmap.isEmpty()) {
+            List <Person> persons = getPersonService().getPeople(pmap.keySet());
 
-        if (persons != null) {
-            for (Person p : persons) {
-                pmap.get(p.getPrincipalId()).setInitiatorPerson(p);
+            if (persons != null) {
+                for (Person p : persons) {
+                    pmap.get(p.getPrincipalId()).setInitiatorPerson(p);
+                }
             }
         }
         
@@ -97,16 +99,18 @@ public class DocumentSearchCriteriaBoLookupableHelperService
         for (DocumentSearchCriteriaBo bo : searchResults) {
             imap.put(bo.getInitiatorPrincipalId(), bo);
         }
-        
-        List <Person> plist = getPersonService().getPeople(imap.keySet());
 
-        for (Person p : plist) {
-            DocumentSearchCriteriaBo bo = imap.get(p.getPrincipalId());
-            
-            if (bo != null) {
-                bo.setInitiatorPrincipalName(p.getPrincipalName());
-                bo.setInitiatorPerson(p);
-            } 
+        if (!imap.isEmpty()) {
+            List <Person> plist = getPersonService().getPeople(imap.keySet());
+
+            for (Person p : plist) {
+                DocumentSearchCriteriaBo bo = imap.get(p.getPrincipalId());
+
+                if (bo != null) {
+                    bo.setInitiatorPrincipalName(p.getPrincipalName());
+                    bo.setInitiatorPerson(p);
+                } 
+            }
         }
     }
 }

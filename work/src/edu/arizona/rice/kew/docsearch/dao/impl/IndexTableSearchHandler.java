@@ -120,7 +120,7 @@ public class IndexTableSearchHandler extends Thread {
         if (LOG.isDebugEnabled()) {
             LOG.debug("index table select: " + retval.toString());
         }
-
+        
         return retval.toString();
     }
    

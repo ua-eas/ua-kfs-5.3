@@ -39,6 +39,8 @@ import org.kuali.rice.core.api.resourceloader.GlobalResourceLoader;
 import org.kuali.rice.core.api.uif.RemotableAttributeField;
 import org.kuali.rice.core.api.util.RiceConstants;
 import org.kuali.rice.core.framework.persistence.platform.DatabasePlatform;
+import org.kuali.rice.core.framework.persistence.platform.MySQLDatabasePlatform;
+import org.kuali.rice.core.framework.persistence.platform.OracleDatabasePlatform;
 import org.kuali.rice.kew.api.KewApiConstants;
 import org.kuali.rice.kew.api.document.DocumentStatus;
 import org.kuali.rice.kew.api.document.DocumentStatusCategory;
@@ -58,7 +60,6 @@ import org.kuali.rice.kew.service.KEWServiceLocator;
 import org.kuali.rice.kim.api.identity.IdentityService;
 import org.kuali.rice.kim.api.identity.Person;
 import org.kuali.rice.kim.api.identity.PersonService;
-import org.kuali.rice.kim.api.identity.principal.PrincipalContract;
 import org.kuali.rice.kim.api.services.KimApiServiceLocator;
 import org.kuali.rice.krad.util.KRADConstants;
 
@@ -74,6 +75,7 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
     private DocumentTypeService documentTypeService;
     private DocumentSearchCustomizationMediator documentSearchCustomizationMediator;
     private RouteNodeService routeNodeService;
+    private boolean databaseSpecificCodeAllowed = false;
 
     @Override
     public void setDataSource(DataSource dataSource) {
@@ -88,11 +90,15 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
             List<RemotableAttributeField> searchFields) {
         DocumentSearchResults.Builder retval = null;
         
+        long start = System.currentTimeMillis();
+
         if (useInternalSearch) {
             retval = doInternalSearch(criteria, criteriaModified, searchFields);
         } else {
             retval = super.findDocuments(defaultDocumentSearchGenerator, criteria, criteriaModified, searchFields);
         }
+
+ //       System.out.println("------------------------------>elapsed time=" + (System.currentTimeMillis() - start)/1000);
 
         return retval;
     }
@@ -128,8 +134,9 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
             stmt.setMaxRows(maxRows);
             stmt.setFetchSize(fetchSize);
 
-            String sql = getSearchSql(criteria, searchFields, maxRows);
-
+            String sql = getSearchSql(criteria, searchFields);
+System.out.println("-------------------------------------------------------");
+System.out.println(sql);
             res = stmt.executeQuery(sql);
 
             // run up to the starting row if required
@@ -181,7 +188,16 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
         StringBuilder retval = new StringBuilder(512);
         
         retval.append(DocumentSearchConstants.FORMAT_OFFSET[1]);
-        retval.append("select distinct");
+        retval.append("select ");
+        
+        // if this is oracle and database-specific code allowed add the parallel hint
+        if (databaseSpecificCodeAllowed) {
+            if (isOracleDatabase()) {
+                retval.append(" /*+ PARALLEL(AUTO) */ ");
+            }
+        }
+        
+        retval.append(" distinct");
         retval.append(DocumentSearchConstants.FORMAT_OFFSET[2]);
         retval.append(DocumentSearchConstants.DOCUMENT_HEADER_ALIAS);
         retval.append(".DOC_HDR_ID, ");
@@ -251,15 +267,15 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
         StringBuilder retval = new StringBuilder(256);
 
         retval.append(DocumentSearchConstants.FORMAT_OFFSET[1]);
-        retval.append("from KREW_DOC_HDR_T ");
-        retval.append(DocumentSearchConstants.DOCUMENT_HEADER_ALIAS);
+        retval.append("from KREW_DOC_TYP_T ");
+        retval.append(DocumentSearchConstants.DOCUMENT_TYPE_ALIAS);
         retval.append(DocumentSearchConstants.FORMAT_OFFSET[2]);
-        retval.append("join KREW_DOC_TYP_T ");
-        retval.append(DocumentSearchConstants.DOCUMENT_TYPE_ALIAS);
-        retval.append(" on (");
-        retval.append(DocumentSearchConstants.DOCUMENT_TYPE_ALIAS);
-        retval.append(".DOC_TYP_ID = ");
+        retval.append("join KREW_DOC_HDR_T ");
         retval.append(DocumentSearchConstants.DOCUMENT_HEADER_ALIAS);
+        retval.append(" on (");
+        retval.append(DocumentSearchConstants.DOCUMENT_HEADER_ALIAS);
+        retval.append(".DOC_TYP_ID = ");
+        retval.append(DocumentSearchConstants.DOCUMENT_TYPE_ALIAS);
         retval.append(".DOC_TYP_ID) ");
 
         if (isActionRequestJoinRequired(personIdentifiers)) {
@@ -371,14 +387,12 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
      * @param searchFields
      * @param personIdentifiers
      * @param indexTableWhereClause
-     * @param maxRows
      * @return 
      */
     protected String getWhereClause(DocumentSearchCriteria criteria, 
         List<RemotableAttributeField> searchFields,
         Map <String, List<String>> personIdentifiers,
-        StringBuilder indexTableWhereClause,
-        int maxRows) {
+        StringBuilder indexTableWhereClause) {
         StringBuilder retval = new StringBuilder(512);
         
         String and = "";
@@ -537,7 +551,7 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
         return retval.toString();
     }
     
-    protected String getOrderByClause(DocumentSearchCriteria criteria, int maxRows) {
+    protected String getOrderByClause(DocumentSearchCriteria criteria) {
         StringBuilder retval = new StringBuilder(128);
         
         retval.append(DocumentSearchConstants.FORMAT_OFFSET[1]);
@@ -653,9 +667,9 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
                 Integer indx = aliasIndex.get(indexTableName);
                 
                 if (indx == null) {
-                    aliasIndex.put(indexTableName, indx = new Integer(1));
+                    aliasIndex.put(indexTableName, indx = Integer.valueOf(1));
                 } else {
-                    aliasIndex.put(indexTableName, indx = new Integer(indx + 1));
+                    aliasIndex.put(indexTableName, indx = Integer.valueOf(indx + 1));
                 }
                 
                 boolean caseInsensitiveSearch = !DocumentSearchInternalUtils.isLookupCaseSensitive(searchField);
@@ -776,32 +790,33 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
     protected List <String> getPrincipalIdListFromPrincipalName(String principalName) {
         List <String> retval = new ArrayList<String>();
 
-        // just eat any exceptions 
-        try {
-            Map<String, String> m = new HashMap<String, String>();
-            m.put(DocumentSearchConstants.PRINCIPAL_NAME_KEY, principalName);
+        if (StringUtils.isNotBlank(principalName)) {
+            // just eat any exceptions 
+            try {
+                List <Person> plist = new ArrayList<Person>();
+                if (DocumentSearchUtils.hasWildcard(principalName)) {
+                    Map<String, String> m = new HashMap<String, String>();
+                    m.put(DocumentSearchConstants.PRINCIPAL_NAME_KEY, principalName);
 
-            // This will search for people with the ability for the valid operands.
-            List <Person> plist = getPersonService().findPeople(m, false);
+                    // This will search for people with the ability for the valid operands.
+                    plist = getPersonService().findPeople(m, true);
+                } else {
+                    Person p = getPersonService().getPersonByPrincipalName(principalName.trim());
+                    if (p != null) {
+                        plist.add(p);
+                    } 
+                }
 
-            if(plist == null || plist.isEmpty()){
-                // findPeople allows for wildcards, but the person must be active.  If no one was found,
-                // check for an exact inactive user.
-                PrincipalContract pc = getIdentityService().getPrincipalByPrincipalName(principalName.trim());
-                if (pc != null) {
-                    retval.add(pc.getPrincipalId());
-                } 
-            }
-
-            if (plist != null) {
-                for(Person p: plist){
-                    retval.add(p.getPrincipalId());
+                if (!plist.isEmpty()) {
+                    for(Person p: plist){
+                        retval.add(p.getPrincipalId());
+                    }
                 }
             }
-        }
-        
-        catch (Exception ex) {
-            LOG.warn("exception thrown in getPrincipalIdListFromPrincipalName()", ex);
+
+            catch (Exception ex) {
+                LOG.warn("exception thrown in getPrincipalIdListFromPrincipalName()", ex);
+            }
         }
         
         return retval;
@@ -848,7 +863,7 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
      * @param maxRows
      * @return 
      */
-    private String getSearchSql(DocumentSearchCriteria criteria, List<RemotableAttributeField> searchFields, int maxRows) {
+    private String getSearchSql(DocumentSearchCriteria criteria, List<RemotableAttributeField> searchFields) {
         StringBuilder retval = new StringBuilder(1024);
         
         // load identity-related informtion for use in query if required
@@ -860,8 +875,8 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
         // for index table joins found during from generation
         StringBuilder indexTableWhereClause = new StringBuilder(256);
         retval.append(getFromClause(criteria, searchFields, personIdentifiers, indexTableWhereClause));
-        retval.append(getWhereClause(criteria, searchFields, personIdentifiers, indexTableWhereClause, maxRows));
-        retval.append(getOrderByClause(criteria, maxRows));
+        retval.append(getWhereClause(criteria, searchFields, personIdentifiers, indexTableWhereClause));
+        retval.append(getOrderByClause(criteria));
         
         if (LOG.isInfoEnabled()) {
             LOG.info("document search sql");
@@ -912,7 +927,6 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
         StringBuilder retval = new StringBuilder(128);
         
         List<String> documentTypeNames = new ArrayList<String>();
-        List<String> childDocumentTypeNames = new ArrayList<String>();
         
         if (StringUtils.isNotBlank(criteria.getDocumentTypeName())) {
             documentTypeNames.add(criteria.getDocumentTypeName());
@@ -922,39 +936,27 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
         
         String or = "";
         int namecnt = 0;
+        
+        
         // recursively add child doc types to list
         if (!documentTypeNames.isEmpty()) {
+            List <String> childDocTypeNames = new ArrayList<String>();
             for (String documentTypeName : documentTypeNames) {
                 if (StringUtils.isNotBlank(documentTypeName)) {
-                    namecnt++;
-                    retval.append(or);
-                    retval.append("{fn ucase(");
-                    retval.append(DocumentSearchConstants.DOCUMENT_TYPE_ALIAS);
-                    retval.append(".DOC_TYP_NM)} ");
-                    retval.append(DocumentSearchUtils.getSearchClause(DocumentSearchConstants.STRING_TYPE_CODE, documentTypeName, true));
                     DocumentType docType = getDocumentTypeService().findByNameCaseInsensitive(documentTypeName.trim());
-                    addChildDocumentTypes(docType, childDocumentTypeNames);
+                    addChildDocumentTypes(docType, childDocTypeNames);
                     or = DocumentSearchConstants.OR_OPERATOR;
                 }
             }
+            
+            documentTypeNames.addAll(childDocTypeNames);
         }
         
-        documentTypeNames.addAll(childDocumentTypeNames);
-        
-        if ((namecnt > 1) || !childDocumentTypeNames.isEmpty()) {
-            retval.append("(");
-        }
-        
-        if (!childDocumentTypeNames.isEmpty()) {
-            retval.append(or);
+        if (!documentTypeNames.isEmpty()) {
             retval.append("{fn ucase(");
             retval.append(DocumentSearchConstants.DOCUMENT_TYPE_ALIAS);
             retval.append(".DOC_TYP_NM)} ");
-            retval.append(DocumentSearchUtils.getSearchClause(DocumentSearchConstants.STRING_TYPE_CODE, childDocumentTypeNames, true));
-        }
-        
-        if ((namecnt > 1) || !childDocumentTypeNames.isEmpty()) {
-            retval.append(")");
+            retval.append(DocumentSearchUtils.getSearchClause(DocumentSearchConstants.STRING_TYPE_CODE, documentTypeNames, true));
         }
         
         return retval.toString();
@@ -970,7 +972,7 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
         if (docType != null) {
             List<DocumentType> childDocTypes = (List<DocumentType>)docType.getChildrenDocTypes();
         
-            if ((childDocTypes != null) && childDocTypes.isEmpty()) {
+            if ((childDocTypes != null) && !childDocTypes.isEmpty()) {
                 for (DocumentType dt : childDocTypes) {
                     childDocTypeNames.add(dt.getName());
                     addChildDocumentTypes(dt, childDocTypeNames);
@@ -1222,5 +1224,17 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
 
     public void setUseInternalSearch(boolean useInternalSearch) {
         this.useInternalSearch = useInternalSearch;
+    }
+
+    public void setDatabaseSpecificCodeAllowed(boolean databaseSpecificCodeAllowed) {
+        this.databaseSpecificCodeAllowed = databaseSpecificCodeAllowed;
+    }
+    
+    private boolean isOracleDatabase() {
+        return (getDbPlatform() instanceof OracleDatabasePlatform);
+    }
+
+    private boolean isMysqlDatabase() {
+        return (getDbPlatform() instanceof MySQLDatabasePlatform);
     }
 }
