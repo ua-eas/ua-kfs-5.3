@@ -98,8 +98,6 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
             retval = super.findDocuments(defaultDocumentSearchGenerator, criteria, criteriaModified, searchFields);
         }
 
-     //   System.out.println("------------------------------>elapsed time=" + (System.currentTimeMillis() - start)/1000);
-
         return retval;
     }
     
@@ -139,12 +137,8 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
             
             
             String sql = getSearchSql(criteria, searchFields);
-//System.out.println("-------------------------------------------------------");
-//System.out.println(sql);
-//long start = System.currentTimeMillis();
 
             res = stmt.executeQuery(sql);
-//System.out.println("---------------->2=" + (System.currentTimeMillis()-start)/1000);          
 
             // run up to the starting row if required
             if (criteria.getStartAtIndex() != null) {
