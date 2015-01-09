@@ -66,7 +66,6 @@ import org.kuali.rice.krad.util.KRADConstants;
 // UAF-6 - Performance improvements to improve user experience for AWS deployment 
 public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.impl.DocumentSearchDAOJdbcImpl {
     private DataSource dataSource;
-    private int fetchSize = DocumentSearchConstants.DEFAULT_FETCH_SIZE;
     private boolean useInternalSearch = false;
     private DatabasePlatform dbPlatform;
     private PersonService personService;
@@ -76,6 +75,7 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
     private DocumentSearchCustomizationMediator documentSearchCustomizationMediator;
     private RouteNodeService routeNodeService;
     private boolean databaseSpecificCodeAllowed = false;
+    private int customFetchSize = DocumentSearchConstants.DEFAULT_FETCH_SIZE;
 
     @Override
     public void setDataSource(DataSource dataSource) {
@@ -98,13 +98,9 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
             retval = super.findDocuments(defaultDocumentSearchGenerator, criteria, criteriaModified, searchFields);
         }
 
- //       System.out.println("------------------------------>elapsed time=" + (System.currentTimeMillis() - start)/1000);
+     //   System.out.println("------------------------------>elapsed time=" + (System.currentTimeMillis() - start)/1000);
 
         return retval;
-    }
-    
-    public void setFetchSize(int fetchSize) {
-        this.fetchSize = fetchSize;
     }
     
     /**
@@ -132,12 +128,23 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
             int maxRows = getMaxResultCap(criteria) + 1;
 
             stmt.setMaxRows(maxRows);
-            stmt.setFetchSize(fetchSize);
-
+            
+            int fetchSize = stmt.getFetchSize();
+            
+            // use default fetch size if document id is included
+            // otherwize use custom fetch size
+            if (StringUtils.isBlank(criteria.getDocumentId())) {
+                fetchSize = customFetchSize;
+            } 
+            
+            
             String sql = getSearchSql(criteria, searchFields);
-System.out.println("-------------------------------------------------------");
-System.out.println(sql);
+//System.out.println("-------------------------------------------------------");
+//System.out.println(sql);
+//long start = System.currentTimeMillis();
+
             res = stmt.executeQuery(sql);
+//System.out.println("---------------->2=" + (System.currentTimeMillis()-start)/1000);          
 
             // run up to the starting row if required
             if (criteria.getStartAtIndex() != null) {
@@ -155,7 +162,7 @@ System.out.println(sql);
             retval.setOverThreshold(res.next());
             if (isUsingAtLeastOneSearchAttribute(criteria)) {
                 // now that we have a list of documents, load the attributes
-                loadDocumentAttributes(results);
+                loadDocumentAttributes(results, fetchSize);
             }
 
             // generate the DocumentSearchResults.Builder to return
@@ -396,7 +403,6 @@ System.out.println(sql);
         StringBuilder retval = new StringBuilder(512);
         
         String and = "";
-        
         
         retval.append(DocumentSearchConstants.FORMAT_OFFSET[1]);
         retval.append("where ");
@@ -1096,7 +1102,7 @@ System.out.println(sql);
      * @param statement
      * @throws SQLException 
      */
-    private void loadDocumentAttributes(List <DocumentInformation> results) throws Exception {
+    private void loadDocumentAttributes(List <DocumentInformation> results, int  maxRows) throws Exception {
         Map <String, DocumentInformation> docmap = new HashMap<String, DocumentInformation>();
 
         // load up a map to facilitate adding attributes
@@ -1107,7 +1113,7 @@ System.out.println(sql);
         List <IndexTableSearchHandler> handlers = new ArrayList<IndexTableSearchHandler>();
 
         for (String tname : DocumentSearchConstants.DOCUMENT_INDEX_TABLES) {
-            handlers.add(new IndexTableSearchHandler(dataSource, tname, docmap.keySet(), fetchSize));
+            handlers.add(new IndexTableSearchHandler(dataSource, tname, docmap.keySet(), maxRows));
         }
 
         while (!isIndexSearchComplete(handlers)) {
@@ -1236,5 +1242,9 @@ System.out.println(sql);
 
     private boolean isMysqlDatabase() {
         return (getDbPlatform() instanceof MySQLDatabasePlatform);
+    }
+
+    public void setCustomFetchSize(int customFetchSize) {
+        this.customFetchSize = customFetchSize;
     }
 }

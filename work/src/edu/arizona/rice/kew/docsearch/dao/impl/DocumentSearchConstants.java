@@ -28,7 +28,6 @@ public class DocumentSearchConstants {
     public static final SimpleDateFormat JDBC_DATE_ESCAPE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     public static final SimpleDateFormat INPUT_DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy");
     public static final int DEFAULT_FETCH_SIZE = 10;
-    public static final int DEFAULT_ATTRIBUTE_FETCH_SIZE = 100;
     
     public static final String DEFAULT_SEARCH_SQL_PREFIX = "select * from (";
     public static final String DEFAULT_SEARCH_SQL_SUFFIX = ") FINAL_SEARCH";

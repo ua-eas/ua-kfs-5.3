@@ -33,15 +33,14 @@
 
     <bean id="enDocumentSearchDAO" class="edu.arizona.rice.kew.docsearch.dao.impl.DocumentSearchDAOJdbcImpl">
         <property name="dataSource" ref="kewDataSource" />
-        
-        <!-- fine tune fetch size here if desired - remove to use default -->
-        <property name="fetchSize" value="50"/>
 
         <!-- set this to false to use default (legacy DocumentSearchGenerator) search logic -->
         <property name="useInternalSearch" value="true"/>
         
         <!-- set to true to allow any db specific code (hints such as oracle PARALLEL) to be used -->
         <property name="databaseSpecificCodeAllowed" value="true"/>
+        
+        <property name="customFetchSize" value="100"/>
     </bean>
     
     <bean id="documentSearchCriteriaProcessor" class="org.kuali.rice.kew.docsearch.DocumentSearchCriteriaProcessorKEWAdapter"/>
