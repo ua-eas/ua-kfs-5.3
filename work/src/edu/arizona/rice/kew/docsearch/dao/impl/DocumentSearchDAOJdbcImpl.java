@@ -98,6 +98,10 @@ public class DocumentSearchDAOJdbcImpl extends org.kuali.rice.kew.docsearch.dao.
             retval = super.findDocuments(defaultDocumentSearchGenerator, criteria, criteriaModified, searchFields);
         }
 
+        if (LOG.isInfoEnabled()) {
+            LOG.info("findDocuments elapsed time(sec): " + (System.currentTimeMillis() - start)/1000);
+        }
+        
         return retval;
     }
     
